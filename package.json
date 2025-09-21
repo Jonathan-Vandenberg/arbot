@@ -1,0 +1,21 @@
+{
+    "name": "arbot",
+    "private": true,
+    "version": "1.0.0",
+    "workspaces": [
+      "apps/*",
+      "packages/*"
+    ],
+    "scripts": {
+      "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+      "build": "pnpm --recursive run build",
+      "start": "pnpm --recursive run start",
+      "lint": "pnpm --recursive run lint",
+      "typecheck": "pnpm --recursive run typecheck"
+    },
+    "devDependencies": {
+      "@types/node": "^22.7.7",
+      "@types/express": "^5.0.0"
+    }
+  }
+  

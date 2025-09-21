@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  bot-core:
+    image: ghcr.io/jonathan-vandenberg/arbot/bot-core:latest
+    container_name: arbot-bot-core
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    depends_on:
+      - api
+      - redis
+      - postgres
+    networks:
+      - arbot-net
+
+  api:
+    image: ghcr.io/jonathan-vandenberg/arbot/api:latest
+    container_name: arbot-api
+    restart: unless-stopped
+    ports:
+      - "4000:3000"
+    env_file:
+      - ../.env
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - arbot-net
+
+  dashboard:
+    image: ghcr.io/jonathan-vandenberg/arbot/dashboard:latest
+    container_name: arbot-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../.env
+    depends_on:
+      - api
+    networks:
+      - arbot-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: arbot-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-arbot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-arbot}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - arbot-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: arbot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - arbot-net
+
+volumes:
+  postgres_data:
+
+networks:
+  arbot-net:
+    driver: bridge

@@ -1,0 +1,107 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Exchange {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  wsUrl     String
+  restUrl   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderBooks    OrderBook[]
+  opportunities ArbitrageOpportunity[] @relation("BuyExchange")
+  sellOpps      ArbitrageOpportunity[] @relation("SellExchange")
+  trades        Trade[]
+
+  @@map("exchanges")
+}
+
+model OrderBook {
+  id           String   @id @default(cuid())
+  symbol       String
+  exchange     Exchange @relation(fields: [exchangeId], references: [id])
+  exchangeId   String
+  bids         Json     // Array of [price, quantity]
+  asks         Json     // Array of [price, quantity]
+  timestamp    DateTime
+  lastUpdateId BigInt?
+
+  createdAt DateTime @default(now())
+
+  @@unique([symbol, exchangeId])
+  @@index([symbol, timestamp])
+  @@map("order_books")
+}
+
+model ArbitrageOpportunity {
+  id             String   @id @default(cuid())
+  symbol         String
+  buyExchange    Exchange @relation("BuyExchange", fields: [buyExchangeId], references: [id])
+  buyExchangeId  String
+  sellExchange   Exchange @relation("SellExchange", fields: [sellExchangeId], references: [id])
+  sellExchangeId String
+  buyPrice       Decimal  @db.Decimal(20, 8)
+  sellPrice      Decimal  @db.Decimal(20, 8)
+  spread         Decimal  @db.Decimal(20, 8)
+  spreadPercent  Decimal  @db.Decimal(10, 4)
+  estimatedProfit Decimal @db.Decimal(20, 8)
+  buyFee         Decimal  @db.Decimal(10, 4)
+  sellFee        Decimal  @db.Decimal(10, 4)
+  totalFee       Decimal  @db.Decimal(10, 4)
+  isExecuted     Boolean  @default(false)
+  timestamp      DateTime
+  createdAt      DateTime @default(now())
+
+  trades Trade[]
+
+  @@index([symbol, timestamp])
+  @@index([spreadPercent])
+  @@map("arbitrage_opportunities")
+}
+
+model Trade {
+  id            String                @id @default(cuid())
+  opportunity   ArbitrageOpportunity? @relation(fields: [opportunityId], references: [id])
+  opportunityId String?
+  exchange      Exchange              @relation(fields: [exchangeId], references: [id])
+  exchangeId    String
+  symbol        String
+  side          TradeType
+  price         Decimal               @db.Decimal(20, 8)
+  quantity      Decimal               @db.Decimal(20, 8)
+  fee           Decimal               @db.Decimal(20, 8)
+  status        TradeStatus
+  exchangeOrderId String?
+  executedAt    DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([symbol, createdAt])
+  @@index([status])
+  @@map("trades")
+}
+
+enum TradeType {
+  BUY
+  SELL
+}
+
+enum TradeStatus {
+  PENDING
+  FILLED
+  PARTIALLY_FILLED
+  CANCELLED
+  FAILED
+}
+
